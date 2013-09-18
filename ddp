@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+"""
+    ddp (dd progress) is a wrapper for the dd tool
+    that forces dd to show useful progress information while
+    copying by sending it SIGUSR1 (see man dd).
+
+    Copyright (C) 2013 Daniel Liew
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+"""
+import sys
+import subprocess
+import logging
+import os
+import signal
+import time
+import errno
+import threading
+import signal
+
+# The minimum number of seconds to wait between
+# sending SIGUSR1 signals to dd.
+# If this number is too low performance will suffer
+pollTime=0.1
+
+if __name__ == '__main__':
+
+    # if received SIGTERM, emulate keyboardInterrupt
+    def sigtermHandler(num, sf):
+        raise KeyboardInterrupt
+    signal(signal.SIGTERM, sigtermHandler)
+
+    logging.basicConfig(level=logging.INFO)
+    args = sys.argv[1:]
+    cmd = ['dd']
+    cmd.extend(args)
+    logging.info('Running {}'.format(cmd))
+    ddp = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+    if '--help' in args or '--version' in args:
+        # In this case we won't be doing any copying
+        ddp.wait()
+        sys.exit(ddp.returncode)
+        
+    try:
+        logging.info('Started dd with PID {}'.format(ddp.pid))
+        
+        # Hacky attempt to read the lines
+        moreOutput=True
+        while moreOutput:
+            os.kill(ddp.pid, signal.SIGUSR1)
+            lines = [ ]
+            # Assume dd outputs three lines at a time
+            # e.g.
+            # 2097152+0 records in 
+            # 2097152+0 records out
+            # 1073741824 bytes (1.1 GB) copied, 7.91816 s, 136 MB/s,
+            for n in range(3):
+                l = ddp.stderr.readline()
+                if l == b'':
+                    moreOutput=False
+                    break
+
+                # We want everything on one line
+                lines.append( l.decode().replace('\n',',') )
+
+            for l in lines:
+                sys.stderr.write(l)
+            sys.stderr.write('\r') # Wrap line on terminal
+            time.sleep(pollTime)
+
+        sys.stderr.write('\n')
+        ddp.wait()
+    except KeyboardInterrupt as e:
+        logging.warning('Keyboard interupt')
+        os.kill(ddp.pid, signal.SIGKILL)
+        
+    logging.info('done')

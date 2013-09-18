@@ -1,0 +1,2 @@
+ddp is a wrapper for the 'dd' tool that
+shows progress information during copying.
