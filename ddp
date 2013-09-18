@@ -41,7 +41,7 @@ if __name__ == '__main__':
     # if received SIGTERM, emulate keyboardInterrupt
     def sigtermHandler(num, sf):
         raise KeyboardInterrupt
-    signal(signal.SIGTERM, sigtermHandler)
+    signal.signal(signal.SIGTERM, sigtermHandler)
 
     logging.basicConfig(level=logging.INFO)
     args = sys.argv[1:]
