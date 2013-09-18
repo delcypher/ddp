@@ -82,6 +82,7 @@ if __name__ == '__main__':
             time.sleep(pollTime)
 
         sys.stderr.write('\n')
+        logging.info('Waiting for dd to finish...')
         ddp.wait()
     except KeyboardInterrupt as e:
         logging.warning('Keyboard interupt')
