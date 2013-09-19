@@ -59,8 +59,19 @@ if __name__ == '__main__':
         
         # Hacky attempt to read the lines
         moreOutput=True
+        firstLoop=True
         while moreOutput:
-            os.kill(ddp.pid, signal.SIGUSR1)
+            if firstLoop:
+              # This is a HACK! If dd has not setup
+              # its signal handler yet then sending
+              # SIGUSR1 will kill it (default behaviour)
+              # by waiting a short amount of time we
+              # allow dd to setup it's signal handler
+              # so it will handle SIGUSR1 the way we want
+              time.sleep(0.1)
+              firstLoop=False
+
+            ddp.send_signal(signal.SIGUSR1)
             lines = [ ]
             # Assume dd outputs three lines at a time
             # e.g.
